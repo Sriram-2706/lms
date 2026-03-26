@@ -1,34 +1,33 @@
 package com.lms.lms.controller;
 
+import com.lms.lms.dto.ProgressRequest;
+import com.lms.lms.dto.ProgressResponse;
 import com.lms.lms.entity.Progress;
-import com.lms.lms.entity.User;
-import com.lms.lms.repository.ProgressRepository;
-import com.lms.lms.repository.UserRepository;
+import com.lms.lms.service.ProgressService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/users")
 public class ProgressController {
 
     @Autowired
-    private ProgressRepository progressRepository;
+    private ProgressService progressService;
 
-    @Autowired
-    private UserRepository userRepository;
+    @PostMapping("/progress")
+    public ResponseEntity<ProgressResponse> createOrUpdateProgress(@RequestBody ProgressRequest request) {
+        Progress progress = progressService.createOrUpdateProgress(request.getUserId(), request.getModuleId(), request.getStatus(), request.getScore());
+        return ResponseEntity.ok(ProgressService.toDto(progress));
+    }
 
-    @GetMapping("/{userId}/progress")
-    public ResponseEntity<List<Progress>> getProgressForUser(@PathVariable Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
-        List<Progress> progress = progressRepository.findByUser(user);
-        return ResponseEntity.ok(progress);
+    @GetMapping("/users/{userId}/progress")
+    public ResponseEntity<List<ProgressResponse>> getProgress(@PathVariable Long userId) {
+        List<ProgressResponse> items = progressService.getProgressForUser(userId).stream()
+                .map(ProgressService::toDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(items);
     }
 }

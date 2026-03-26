@@ -1,118 +1,78 @@
 package com.lms.lms.controller;
 
-import com.lms.lms.dto.AssignmentRequest;
-import com.lms.lms.dto.CourseRequest;
-import com.lms.lms.dto.ModuleRequest;
+import com.lms.lms.dto.*;
 import com.lms.lms.entity.Assignment;
 import com.lms.lms.entity.Course;
 import com.lms.lms.entity.CourseModule;
-import com.lms.lms.entity.User;
-import com.lms.lms.repository.AssignmentRepository;
-import com.lms.lms.repository.CourseModuleRepository;
-import com.lms.lms.repository.CourseRepository;
-import com.lms.lms.repository.UserRepository;
-import jakarta.validation.Valid;
+import com.lms.lms.service.AssignmentService;
+import com.lms.lms.service.CourseModuleService;
+import com.lms.lms.service.CourseService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.security.Principal;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/courses")
 public class CourseController {
 
     @Autowired
-    private CourseRepository courseRepository;
+    private CourseService courseService;
 
     @Autowired
-    private CourseModuleRepository courseModuleRepository;
+    private CourseModuleService courseModuleService;
 
     @Autowired
-    private AssignmentRepository assignmentRepository;
+    private AssignmentService assignmentService;
 
-    @Autowired
-    private UserRepository userRepository;
-
-    @PostMapping
-    @PreAuthorize("hasRole('INSTRUCTOR')")
-    public ResponseEntity<Course> createCourse(@RequestBody @Valid CourseRequest request, Principal principal) {
-        User instructor = userRepository.findByEmail(principal.getName())
-                .orElseThrow(() -> new IllegalStateException("Instructor not found"));
-
-        Course course = Course.builder()
-                .title(request.getTitle())
-                .description(request.getDescription())
-                .instructor(instructor)
-                .build();
-
-        Course saved = courseRepository.save(course);
-        return new ResponseEntity<>(saved, HttpStatus.CREATED);
+    @PostMapping("/courses")
+    public ResponseEntity<CourseResponse> createCourse(@RequestBody CreateCourseRequest request) {
+        Course course = courseService.createCourse(request.getInstructorId(), request.getTitle(), request.getDescription());
+        return ResponseEntity.ok(CourseService.toDto(course));
     }
 
-    @PostMapping("/{courseId}/modules")
-    @PreAuthorize("hasRole('INSTRUCTOR')")
-    public ResponseEntity<CourseModule> addModule(@PathVariable Long courseId,
-                                                  @RequestBody @Valid ModuleRequest request,
-                                                  Principal principal) {
-        userRepository.findByEmail(principal.getName())
-                .orElseThrow(() -> new IllegalStateException("Instructor not found"));
+    @GetMapping("/courses")
+    public ResponseEntity<List<CourseResponse>> getAllCourses() {
+        List<CourseResponse> result = courseService.listAllCourses().stream()
+                .map(CourseService::toDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(result);
+    }
 
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new IllegalArgumentException("Course not found"));
+    @GetMapping("/users/{userId}/courses")
+    public ResponseEntity<List<CourseResponse>> getCoursesForUser(@PathVariable Long userId) {
+        List<CourseResponse> result = courseService.listCoursesForUser(userId).stream()
+                .map(CourseService::toDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(result);
+    }
 
-        CourseModule module = CourseModule.builder()
-                .course(course)
-                .title(request.getTitle())
-                .order(request.getOrder())
-                .build();
+    @PostMapping("/courses/{courseId}/modules")
+    public ResponseEntity<CourseModuleResponse> addModule(@PathVariable Long courseId, @RequestBody CreateModuleRequest request) {
+        CourseModule module = courseModuleService.addModule(courseId, request.getTitle(), request.getOrder());
+        return ResponseEntity.ok(CourseModuleService.toDto(module));
+    }
 
-        CourseModule saved = courseModuleRepository.save(module);
-        return new ResponseEntity<>(saved, HttpStatus.CREATED);
+    @GetMapping("/courses/{courseId}/modules")
+    public ResponseEntity<List<CourseModuleResponse>> listModules(@PathVariable Long courseId) {
+        List<CourseModuleResponse> modules = courseModuleService.listModulesByCourse(courseId).stream()
+                .map(CourseModuleService::toDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(modules);
     }
 
     @PostMapping("/modules/{moduleId}/assignments")
-    @PreAuthorize("hasRole('INSTRUCTOR')")
-    public ResponseEntity<Assignment> addAssignment(@PathVariable Long moduleId,
-                                                    @RequestBody @Valid AssignmentRequest request,
-                                                    Principal principal) {
-        userRepository.findByEmail(principal.getName())
-                .orElseThrow(() -> new IllegalStateException("Instructor not found"));
-
-        CourseModule module = courseModuleRepository.findById(moduleId)
-                .orElseThrow(() -> new IllegalArgumentException("Module not found"));
-
-        Assignment assignment = Assignment.builder()
-                .module(module)
-                .title(request.getTitle())
-                .maxScore(request.getMaxScore())
-                .dueDate(request.getDueDate())
-                .build();
-
-        Assignment saved = assignmentRepository.save(assignment);
-        return new ResponseEntity<>(saved, HttpStatus.CREATED);
+    public ResponseEntity<AssignmentResponse> addAssignment(@PathVariable Long moduleId, @RequestBody CreateAssignmentRequest request) {
+        Assignment assignment = assignmentService.addAssignment(moduleId, request.getTitle(), request.getMaxScore(), request.getDueDate());
+        return ResponseEntity.ok(AssignmentService.toDto(assignment));
     }
 
-    @GetMapping
-    public List<Course> getAllCourses() {
-        return courseRepository.findAll();
-    }
-
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Course>> getCoursesByUser(@PathVariable Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
-        List<Course> courses;
-        if (user.getRole().name().equals("INSTRUCTOR")) {
-            courses = courseRepository.findByInstructor(user);
-        } else {
-            courses = courseRepository.findAll();
-        }
-
-        return ResponseEntity.ok(courses);
+    @GetMapping("/modules/{moduleId}/assignments")
+    public ResponseEntity<List<AssignmentResponse>> listAssignments(@PathVariable Long moduleId) {
+        List<AssignmentResponse> assignments = assignmentService.listByModule(moduleId).stream()
+                .map(AssignmentService::toDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(assignments);
     }
 }
