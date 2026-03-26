@@ -1,0 +1,101 @@
+Problem Statement:
+9. Learning Management System (Backend)
+
+Problem:
+Need systems to manage courses and student progress.
+
+Objective:
+Build backend for LMS.
+
+Scope:
+
+* Courses & modules
+* Enrollment
+* Progress tracking
+* Assignments
+
+SYSTEM: Learning Management System (LMS Backend)
+
+ENTITIES:
+
+1. USERS
+- id (PK)
+- username
+- email (unique)
+- role (STUDENT / INSTRUCTOR)
+- created_at
+
+2. COURSES
+- id (PK)
+- title
+- description
+- instructor_id (FK → USERS)
+
+3. MODULES
+- id (PK)
+- course_id (FK → COURSES)
+- title
+- order
+
+4. ASSIGNMENTS
+- id (PK)
+- module_id (FK → MODULES)
+- title
+- max_score
+- due_date
+
+5. ENROLLMENTS
+- id (PK)
+- user_id (FK → USERS)
+- course_id (FK → COURSES)
+- enrolled_at
+- UNIQUE(user_id, course_id)
+
+6. PROGRESS
+- id (PK)
+- user_id (FK → USERS)
+- module_id (FK → MODULES)
+- status (NOT_STARTED / IN_PROGRESS / COMPLETED)
+- score
+- completed_at
+
+
+RELATIONSHIPS:
+
+- One instructor can create many courses
+- One course has many modules
+- One module has many assignments
+- One student can enroll in many courses
+- Enrollment connects student and course
+- Progress tracks each student's completion of modules
+
+STUDENT FLOW:
+
+1. Register
+2. Login
+3. View all courses
+4. Enroll in a course
+5. View modules of that course
+6. View assignments inside modules
+7. Submit assignment (updates progress)
+8. Track progress
+
+
+INSTRUCTOR FLOW:
+
+1. Login
+2. Create course
+3. Add modules to course
+4. Add assignments to modules
+5. View student progress
+
+API's
+POST   /users
+POST   /courses
+POST   /courses/{courseId}/modules
+POST   /modules/{moduleId}/assignments
+POST   /enroll
+GET    /courses
+GET    /users/{id}/courses
+POST   /progress
+GET    /users/{id}/progress
