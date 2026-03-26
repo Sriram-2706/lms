@@ -9,7 +9,7 @@ Safely sync the feature branch with main and push it to the remote repository au
 You must use your terminal execution tool to run these commands sequentially. If any command fails, stop and report the error to the user.
 1. Execute `git checkout main`
 2. Execute `git pull origin main`
-3. Execute `git checkout -` (to return to the feature branch)
+3. Execute `git checkout -b` (to return to the feature branch)
 4. Execute `git merge main`
 5. If the merge is successful, execute `git push -u origin HEAD`
 
